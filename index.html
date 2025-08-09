@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light dark" />
+    <title>Morning Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet" />
+    <style>
+      :root {
+        --text-color: #ffffff;
+        --overlay-color: rgba(0, 0, 0, 0.45);
+        /* Replace the Unsplash URL with any scenic sunrise mountains image you prefer */
+        --background-image: url('https://images.unsplash.com/photo-1470770841072-f978cf4d019e?q=80&w=1920&auto=format&fit=crop');
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        height: 100%;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100svh;
+        display: grid;
+        place-items: center;
+        font-family: 'Inter', system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, 'Apple Color Emoji', 'Segoe UI Emoji';
+        color: var(--text-color);
+        background: #000;
+      }
+
+      /* Background image + dim overlay */
+      .background {
+        position: fixed;
+        inset: 0;
+        background-image: linear-gradient(var(--overlay-color), var(--overlay-color)), var(--background-image);
+        background-size: cover;
+        background-position: center center;
+        background-repeat: no-repeat;
+        will-change: transform;
+        z-index: 0;
+        opacity: 0;
+        animation: fade-in 900ms ease-out 100ms forwards;
+      }
+
+      /* Foreground content */
+      .content {
+        position: relative;
+        z-index: 1;
+        text-align: center;
+        width: min(92vw, 1000px);
+        padding: 2rem;
+        opacity: 0;
+        animation: rise-in 700ms ease-out 250ms forwards;
+      }
+
+      .clock {
+        font-weight: 800;
+        line-height: 1;
+        letter-spacing: 0.02em;
+        /* Responsive size: grows on large screens, remains readable on mobile */
+        font-size: clamp(3.25rem, 12vw, 11rem);
+        text-shadow: 0 6px 28px rgba(0, 0, 0, 0.45);
+      }
+
+      .greeting {
+        margin-top: 0.65rem;
+        font-weight: 600;
+        opacity: 0.95;
+        font-size: clamp(1rem, 2.8vw, 2.05rem);
+      }
+
+      .today-label {
+        margin-top: clamp(1.6rem, 3.5vw, 2.5rem);
+        font-size: clamp(0.72rem, 1.2vw, 0.95rem);
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        font-weight: 700;
+        opacity: 0.85;
+      }
+
+      .task {
+        margin-top: 0.55rem;
+        font-size: clamp(1rem, 2.2vw, 1.35rem);
+        opacity: 0.95;
+      }
+
+      /* Animations */
+      @keyframes fade-in {
+        from {
+          opacity: 0;
+          transform: scale(1.02);
+        }
+        to {
+          opacity: 1;
+          transform: scale(1);
+        }
+      }
+
+      @keyframes rise-in {
+        from {
+          opacity: 0;
+          transform: translateY(12px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      /* Respect reduced motion preferences */
+      @media (prefers-reduced-motion: reduce) {
+        .background,
+        .content {
+          animation: none;
+          opacity: 1;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="background" aria-hidden="true"></div>
+    <main class="content" role="main">
+      <div class="clock" id="clock" aria-live="polite" aria-label="Current time">00:00</div>
+      <div class="greeting" id="greeting">Good day.</div>
+      <div class="today-label">Today</div>
+      <div class="task" id="task">Get started on new project</div>
+    </main>
+
+    <script>
+      // Edit this to personalize the greeting name
+      const USER_NAME = 'Jason';
+
+      function getGreetingForHour(hour24) {
+        if (hour24 < 12) return 'Good morning';
+        if (hour24 < 17) return 'Good afternoon';
+        return 'Good evening';
+      }
+
+      function formatTwoDigits(value) {
+        return String(value).padStart(2, '0');
+      }
+
+      function updateTimeAndGreeting() {
+        const now = new Date();
+        const hours = now.getHours();
+        const minutes = now.getMinutes();
+
+        const timeText = `${formatTwoDigits(hours)}:${formatTwoDigits(minutes)}`;
+        const greetingText = `${getGreetingForHour(hours)}, ${USER_NAME}.`;
+
+        const clockEl = document.getElementById('clock');
+        const greetingEl = document.getElementById('greeting');
+        if (clockEl) clockEl.textContent = timeText;
+        if (greetingEl) greetingEl.textContent = greetingText;
+      }
+
+      // Initial run and then update every second so minutes flip on time
+      updateTimeAndGreeting();
+      setInterval(updateTimeAndGreeting, 1000);
+    </script>
+  </body>
+  </html>
+
+

@@ -91,6 +91,53 @@
         opacity: 0.95;
       }
 
+      /* Controls: keep awake + fullscreen */
+      .controls {
+        position: fixed;
+        top: 16px;
+        right: 16px;
+        z-index: 2;
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        background: rgba(0, 0, 0, 0.35);
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        border-radius: 12px;
+        padding: 10px 12px;
+        backdrop-filter: blur(6px);
+        -webkit-backdrop-filter: blur(6px);
+      }
+
+      .controls label {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 0.95rem;
+        user-select: none;
+      }
+
+      .controls input[type='checkbox'] {
+        width: 1.1rem;
+        height: 1.1rem;
+        accent-color: #ffffff;
+      }
+
+      .controls button {
+        appearance: none;
+        border: 1px solid rgba(255, 255, 255, 0.45);
+        background: rgba(255, 255, 255, 0.08);
+        color: #fff;
+        padding: 8px 12px;
+        border-radius: 10px;
+        font-weight: 600;
+        font-size: 0.9rem;
+        cursor: pointer;
+      }
+
+      .controls button:hover {
+        background: rgba(255, 255, 255, 0.16);
+      }
+
       /* Animations */
       @keyframes fade-in {
         from {
@@ -126,16 +173,23 @@
   </head>
   <body>
     <div class="background" aria-hidden="true"></div>
+    <div class="controls" role="region" aria-label="Display controls">
+      <label title="Prevent the screen from sleeping while this page is open">
+        <input type="checkbox" id="keepAwakeToggle" />
+        Keep screen awake
+      </label>
+      <button id="fullscreenBtn" type="button" title="Toggle fullscreen">Enter Fullscreen</button>
+    </div>
     <main class="content" role="main">
       <div class="clock" id="clock" aria-live="polite" aria-label="Current time">00:00</div>
       <div class="greeting" id="greeting">Good day.</div>
       <div class="today-label">Today</div>
-      <div class="task" id="task">Get started on new project</div>
+      <div class="task" id="task">Be patient; patience is the highest form of respect for God’s wisdom.<br>صبور باش،صبر اوج احترام،به حکمت خداست</div>
     </main>
 
     <script>
       // Edit this to personalize the greeting name
-      const USER_NAME = 'Jason';
+      const USER_NAME = 'Haider Fahim';
 
       function getGreetingForHour(hour24) {
         if (hour24 < 12) return 'Good morning';
@@ -164,6 +218,111 @@
       // Initial run and then update every second so minutes flip on time
       updateTimeAndGreeting();
       setInterval(updateTimeAndGreeting, 1000);
+
+      // --- Keep screen awake (Wake Lock API) ---
+      const KEEP_AWAKE_KEY = 'dashboard_keepAwake';
+      const keepAwakeToggle = document.getElementById('keepAwakeToggle');
+      let wakeLockSentinel = null;
+
+      async function requestWakeLock() {
+        if (!('wakeLock' in navigator)) {
+          console.warn('Wake Lock API not supported in this browser.');
+          return false;
+        }
+        try {
+          wakeLockSentinel = await navigator.wakeLock.request('screen');
+          wakeLockSentinel.addEventListener('release', () => {
+            console.log('Wake Lock was released');
+          });
+          console.log('Wake Lock is active');
+          return true;
+        } catch (err) {
+          console.warn('Wake Lock request failed:', err);
+          return false;
+        }
+      }
+
+      async function releaseWakeLock() {
+        try {
+          if (wakeLockSentinel) {
+            await wakeLockSentinel.release();
+          }
+        } catch (e) {
+          // ignore
+        } finally {
+          wakeLockSentinel = null;
+        }
+      }
+
+      function restoreKeepAwakePreference() {
+        const saved = localStorage.getItem(KEEP_AWAKE_KEY) === '1';
+        if (keepAwakeToggle) {
+          keepAwakeToggle.checked = saved;
+          if (saved) requestWakeLock();
+        }
+      }
+
+      keepAwakeToggle?.addEventListener('change', async (e) => {
+        const enabled = e.target.checked;
+        localStorage.setItem(KEEP_AWAKE_KEY, enabled ? '1' : '0');
+        if (enabled) {
+          const ok = await requestWakeLock();
+          if (!ok) {
+            alert('Keep-awake is not supported or was blocked. Try keeping your device awake manually.');
+            e.target.checked = false;
+            localStorage.setItem(KEEP_AWAKE_KEY, '0');
+          }
+        } else {
+          await releaseWakeLock();
+        }
+      });
+
+      document.addEventListener('visibilitychange', async () => {
+        if (document.visibilityState === 'visible' && keepAwakeToggle?.checked) {
+          await requestWakeLock();
+        }
+      });
+
+      restoreKeepAwakePreference();
+
+      // --- Fullscreen toggle ---
+      const fullscreenBtn = document.getElementById('fullscreenBtn');
+
+      function isFullscreen() {
+        return !!(document.fullscreenElement || document.webkitFullscreenElement);
+      }
+
+      function updateFullscreenButton() {
+        if (!fullscreenBtn) return;
+        fullscreenBtn.textContent = isFullscreen() ? 'Exit Fullscreen' : 'Enter Fullscreen';
+      }
+
+      async function toggleFullscreen() {
+        try {
+          if (!isFullscreen()) {
+            const elem = document.documentElement;
+            if (elem.requestFullscreen) {
+              await elem.requestFullscreen({ navigationUI: 'hide' });
+            } else if (elem.webkitRequestFullscreen) {
+              elem.webkitRequestFullscreen();
+            }
+          } else {
+            if (document.exitFullscreen) {
+              await document.exitFullscreen();
+            } else if (document.webkitExitFullscreen) {
+              document.webkitExitFullscreen();
+            }
+          }
+        } catch (e) {
+          console.warn('Fullscreen toggle error:', e);
+        }
+        updateFullscreenButton();
+      }
+
+      fullscreenBtn?.addEventListener('click', toggleFullscreen);
+      document.addEventListener('fullscreenchange', updateFullscreenButton);
+      document.addEventListener('webkitfullscreenchange', updateFullscreenButton);
+      updateFullscreenButton();
     </script>
   </body>
   </html>
